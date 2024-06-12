@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Coin Flip Grid Game</title>
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            font-family: Arial, sans-serif;
+        }
+        #grid {
+            display: grid;
+            grid-template-columns: repeat(6, 50px);
+            grid-gap: 5px;
+            margin: 20px 0;
+        }
+        .cell {
+            width: 50px;
+            height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid #000;
+            cursor: pointer;
+        }
+        .user-cell {
+            background-color: lightgreen;
+        }
+        .bot-cell {
+            background-color: lightcoral;
+        }
+        .selected {
+            border-color: yellow;
+        }
+        #flip-button, #how-to-button {
+            padding: 10px 20px;
+            font-size: 16px;
+            margin: 5px;
+        }
+        #message {
+            margin-top: 20px;
+            font-size: 18px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Coin Flip Grid Game</h1>
+    <button id="how-to-button">How to Play</button>
+    <div>👤</div>
+    <div id="grid"></div>
+    <div>🤖</div>
+    <button id="flip-button">Flip Coin</button>
+    <div id="message"></div>
+    <script>
+        const gridElement = document.getElementById('grid');
+        const flipButton = document.getElementById('flip-button');
+        const howToButton = document.getElementById('how-to-button');
+        const messageElement = document.getElementById('message');
+        const gridSize = 36;
+        const gridColumns = 6;
+        let userCells = Array.from({ length: 18 }, (_, i) => i);
+        let botCells = Array.from({ length: 18 }, (_, i) => i + 18);
+        let selectedBotCells = [];
+
+        function createGrid() {
+            gridElement.innerHTML = '';
+            for (let i = 0; i < gridSize; i++) {
+                const cell = document.createElement('div');
+                cell.classList.add('cell');
+                if (userCells.includes(i)) {
+                    cell.classList.add('user-cell');
+                } else if (botCells.includes(i)) {
+                    cell.classList.add('bot-cell');
+                    cell.addEventListener('click', () => selectCell(cell, i));
+                }
+                gridElement.appendChild(cell);
+            }
+        }
+
+        function selectCell(cell, index) {
+            if (cell.classList.contains('selected')) {
+                cell.classList.remove('selected');
+                selectedBotCells = selectedBotCells.filter(i => i !== index);
+            } else {
+                if (isAdjacent(index)) {
+                    cell.classList.add('selected');
+                    selectedBotCells.push(index);
+                } else {
+                    alert('You can only select bot cells that are adjacent to your cells or other selected cells.');
+                }
+            }
+        }
+
+        function isAdjacent(index) {
+            const adjacentIndices = [
+                index - 1, index + 1,
+                index - gridColumns, index + gridColumns,
+                index - gridColumns - 1, index - gridColumns + 1,
+                index + gridColumns - 1, index + gridColumns + 1
+            ];
+            return adjacentIndices.some(i => userCells.includes(i) || selectedBotCells.includes(i));
+        }
+
+        function getAdjacentUserCells(index) {
+            const adjacentIndices = [
+                index - 1, index + 1,
+                index - gridColumns, index + gridColumns,
+                index - gridColumns - 1, index - gridColumns + 1,
+                index + gridColumns - 1, index + gridColumns + 1
+            ];
+            return adjacentIndices.filter(i => userCells.includes(i));
+        }
+
+        function flipCoin() {
+            if (selectedBotCells.length === 0) {
+                messageElement.textContent = 'Please select bot cells to flip for!';
+                return;
+            }
+            const coinResult = Math.random() < 0.5 ? 'heads' : 'tails';
+            messageElement.textContent = `Coin result: ${coinResult}`;
+            if (coinResult === 'heads') {
+                selectedBotCells.forEach(index => {
+                    botCells = botCells.filter(i => i !== index);
+                    userCells.push(index);
+                });
+            } else {
+                const adjacentUserCells = [];
+                selectedBotCells.forEach(index => {
+                    const adjCells = getAdjacentUserCells(index);
+                    adjacentUserCells.push(...adjCells);
+                });
+                if (adjacentUserCells.length < selectedBotCells.length) {
+                    messageElement.textContent = 'Game Over! You lose!';
+                    flipButton.disabled = true;
+                    return;
+                }
+                adjacentUserCells.slice(0, selectedBotCells.length).forEach(index => {
+                    userCells = userCells.filter(i => i !== index);
+                    botCells.push(index);
+                });
+            }
+            selectedBotCells = [];
+            checkGameOver();
+            createGrid();
+        }
+
+        function checkGameOver() {
+            if (userCells.length === 0) {
+                messageElement.textContent = 'Game Over! You lose!';
+                flipButton.disabled = true;
+            } else if (botCells.length === 0) {
+                messageElement.textContent = 'Congratulations! You win!';
+                flipButton.disabled = true;
+            }
+        }
+
+        howToButton.addEventListener('click', () => {
+            alert(`Coin Flip Grid Game\n\nHow to Play:\n1. Initial Setup:\n   - The grid starts with half the cells belonging to the user (green) and half to the bot (red).\n\n2. Selecting Cells:\n   - Click on red cells (bot's cells) adjacent to green cells (user's cells) to select them.\n\n3. Flip the Coin:\n   - After selecting the cells, click the "Flip Coin" button.\n\n4. Coin Flip Outcome:\n   - Heads: You win and gain the selected cells.\n   - Tails: You lose, and the bot gains an equal number of your cells adjacent to the selected cells.\n\n5. Winning and Losing:\n   - You win if you control all the cells.\n   - You lose if the bot controls all the cells.`);
+        });
+
+        flipButton.addEventListener('click', flipCoin);
+
+        createGrid();
+    </script>
+</body>
+</html>
